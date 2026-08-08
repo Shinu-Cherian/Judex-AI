@@ -1,0 +1,12 @@
+fastapi>=0.100.0
+uvicorn>=0.20.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+requests>=2.28.0
+python-multipart>=0.0.6
+pypdf>=3.17.0
+python-docx>=1.1.0
+chromadb>=0.6.3
+langgraph>=0.4.8
+langchain-core>=0.3.65
+sentence-transformers>=3.4.1

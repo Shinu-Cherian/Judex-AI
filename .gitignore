@@ -1,0 +1,40 @@
+# Environment Secrets (CRITICAL SECURITY PROTECTION)
+.env
+.env.local
+.env.*.local
+*.env
+*.key
+*.pem
+*.secret
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+*.sqlite3
+*.db
+
+# Frontend Node Modules & Build Artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+node_modules/
+dist/
+.npm/
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Gemini Brain & Artifact Scratch Folders
+.gemini/
+.judex_rag_db/
+brain/
+scratch/
