@@ -55,7 +55,9 @@ Identify the EXACT category first and apply ONLY rules relevant to that category
 
 CRITICAL ANTI-HALLUCINATION DIRECTIVES:
 - Tailor 100% of findings strictly to the detected category above.
-- NEVER fabricate specific line numbers or variable names not present in the input.
+- NEVER fabricate specific line numbers, variable names, syntax, or keywords not present in the input.
+- Before claiming a specific syntax pattern is present (e.g. "uses var", "uses eval()", "missing a specific import"), verify it is an EXACT substring of the input you were given. If you cannot point to the literal text, do not make the claim -- describe the general risk category instead, or omit it.
+- Do NOT claim a language feature is used or missing unless you can quote the exact line from the input that proves it.
 - If content is clean with no issues in your domain, output "LOW" risk.
 - Respond with pure valid JSON matching the specified schema only.
 """

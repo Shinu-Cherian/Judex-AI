@@ -1,6 +1,7 @@
 import React from 'react';
 import { Cpu } from 'lucide-react';
 import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts';
+import CitationText from './CitationText';
 
 export default function JudgeCard({ model }) {
   if (!model) return null;
@@ -67,7 +68,7 @@ export default function JudgeCard({ model }) {
         {findingsList.map((f, idx) => (
           <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
             <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#5c5c5f', marginTop: '7px', flexShrink: 0 }} />
-            <div style={{ fontSize: '13px', color: '#8a8a8e', lineHeight: 1.5 }}>{typeof f === 'object' ? JSON.stringify(f) : String(f)}</div>
+            <div style={{ fontSize: '13px', color: '#8a8a8e', lineHeight: 1.5 }}><CitationText text={f} /></div>
           </div>
         ))}
       </div>

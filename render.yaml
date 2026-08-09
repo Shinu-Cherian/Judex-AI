@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: luminance-panel-of-judges
+    name: judex-ai
     env: python
     buildCommand: "./build.sh"
     startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
@@ -10,4 +10,6 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
         sync: false

@@ -85,7 +85,7 @@ def self_eval_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
 def inspector_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """3-LLM Inspector Panel with RAG context injected into each prompt."""
-    from backend.analyzer import call_groq_llama, call_mistral, call_gemini, build_fallback_for_content
+    from backend.analyzer import call_groq_llama, call_mistral, call_gemini, build_fallback_for_content, verify_findings_against_content
     from backend.prompts import JUDGE_1_PROMPT, JUDGE_2_PROMPT, JUDGE_3_PROMPT
 
     input_text = state["input_text"]
@@ -120,6 +120,9 @@ def inspector_node(state: Dict[str, Any]) -> Dict[str, Any]:
     m2["name"] = "Mistral Small";        m2["role"] = "Performance Inspector"
     m3["name"] = "Gemini 2.0 Flash";     m3["role"] = "Code Quality Inspector"
 
+    for m in [m1, m2, m3]:
+        m["findings"] = verify_findings_against_content(m.get("findings", []), input_text)
+
     rag_sources = [
         d.get("metadata", {}).get("standard", "")
         for d in state.get("retrieved_docs", [])
@@ -137,7 +140,7 @@ def inspector_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
 def chief_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """Chief Judge synthesis, heatmap, temporal risk, and dependency graph."""
-    from backend.analyzer import call_groq_chief, build_fallback_for_content
+    from backend.analyzer import call_groq_chief, derive_chief_verdict_from_inspectors
     from backend.temporal import calculate_temporal_risk
     from backend.dependency import build_dependency_graph
     from backend.prompts import CHIEF_JUDGE_PROMPT
@@ -150,9 +153,12 @@ def chief_node(state: Dict[str, Any]) -> Dict[str, Any]:
     chief_prompt = f"{CHIEF_JUDGE_PROMPT}\n\n{rag_context}" if rag_context else CHIEF_JUDGE_PROMPT
 
     print("[Pipeline] chief_node: Running Chief Judge...")
-    fallback = build_fallback_for_content(input_text, content_type)
     chief_live = call_groq_chief(chief_prompt, input_text, models_list)
-    judge_data = chief_live if (chief_live and "final_risk" in chief_live) else fallback["judge"]
+    if chief_live and "final_risk" in chief_live:
+        judge_data = chief_live
+    else:
+        print("[Pipeline] chief_node: Live Chief Judge call failed -- deriving verdict from live inspector reports (not a generic template).")
+        judge_data = derive_chief_verdict_from_inspectors(models_list, content_type)
 
     total_conf = sum(m.get("confidence", 85) for m in models_list)
     judge_data["weighted_confidence"] = round(total_conf / 3)
@@ -196,7 +202,10 @@ def chief_node(state: Dict[str, Any]) -> Dict[str, Any]:
                              "code_generic", "sql", "shell_script",
                              "dockerfile", "kubernetes", "json_config"]:
             if any(bad in i for bad in ["indemnification", "liability cap",
-                                         "governing law", "hold harmless"]):
+                                         "governing law", "hold harmless",
+                                         "content security policy", "csp meta",
+                                         "sri hash", "subresource integrity",
+                                         "doctype", "html5 element"]):
                 return False
         if content_type == "security_log" and any(bad in i for bad in [
                 "docstring", "python type hints", "css variables",

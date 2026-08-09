@@ -38,3 +38,6 @@ Thumbs.db
 .judex_rag_db/
 brain/
 scratch/
+
+# AI coding assistant tooling config (not project source)
+.claude/

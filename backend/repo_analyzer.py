@@ -126,6 +126,7 @@ def analyze_repository_zip_bytes(zip_bytes: bytes, zip_filename: str = "project.
                 "rag_sources": sources,
                 "symbols": f["symbols"],
                 "inspection_ms": analysis.get("pipeline_ms", 0),
+                "content": f_content,
             })
 
         except Exception as err:
@@ -142,6 +143,7 @@ def analyze_repository_zip_bytes(zip_bytes: bytes, zip_filename: str = "project.
                 "rag_sources": [],
                 "symbols": f["symbols"],
                 "inspection_ms": 0,
+                "content": f_content,
             })
 
     # Step 3: Compute Repository Health Score (0-100%)
@@ -169,6 +171,7 @@ def analyze_repository_zip_bytes(zip_bytes: bytes, zip_filename: str = "project.
                 "rag_sources": [],
                 "symbols": f["symbols"],
                 "inspection_ms": 0,
+                "content": f["content"],
             })
 
     # Step 4: Construct Cross-File Repository Verdict

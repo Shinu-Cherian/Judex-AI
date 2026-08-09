@@ -92,17 +92,18 @@ export default function DependencyGraph({ dependencies, centralTitle = "process_
 
   const highRiskCount = nodeItems.filter(i => i.status === 'MUST UPDATE' || i.status === 'HIGH').length;
 
+  const totalHeight = nodeItems.length * 80;
   const nodes = [
     {
       id: 'center',
       type: 'custom',
-      position: { x: 40, y: Math.max(40, (nodeItems.length * 75) / 2 - 20) },
+      position: { x: 30, y: Math.max(20, totalHeight / 2 - 30) },
       data: { label: centralTitle, isCentral: true, isSelected: selectedNodeId === 'center' }
     },
     ...nodeItems.map((item, idx) => ({
       id: `child_${idx}`,
       type: 'custom',
-      position: { x: 360, y: 20 + idx * 75 },
+      position: { x: 300, y: idx * 80 },
       data: {
         label: item.name,
         badge: item.status,
@@ -154,18 +155,26 @@ export default function DependencyGraph({ dependencies, centralTitle = "process_
         Heat-mapped visual blast-radius showing real-time dependency chain ripples if <span style={{ color: '#818cf8', fontWeight: 600 }}>{centralTitle}</span> is modified
       </div>
 
-      <div style={{ width: '100%', height: '260px', background: '#090a0f', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div style={{
+        width: '100%',
+        height: `${Math.max(280, Math.min(420, nodeItems.length * 65 + 60))}px`,
+        background: '#090a0f',
+        borderRadius: '10px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           onNodeClick={(_, node) => setSelectedNodeId(node.id)}
           fitView
+          fitViewOptions={{ padding: 0.35, maxZoom: 1.1, minZoom: 0.8 }}
           attributionPosition="bottom-left"
         >
           <Background color="#1e1e24" gap={18} size={1} />
           <Controls style={{ background: '#0f1011', border: '1px solid #1c1c1f', color: '#8a8a8e' }} />
-          <MiniMap style={{ background: '#0a0a0b', border: '1px solid #1c1c1f' }} nodeColor={n => n.id === 'center' ? '#6366f1' : '#ef4444'} />
         </ReactFlow>
       </div>
     </div>

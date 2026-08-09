@@ -41,8 +41,8 @@ EXTENSION_MAP = {
     '.htm': 'html',
     '.json': 'json_config',
     'dockerfile': 'dockerfile',
-    '.yaml': 'kubernetes',
-    '.yml': 'kubernetes',
+    '.yaml': 'kubernetes',   # refined further in _detect_file_content_type()
+    '.yml':  'kubernetes',   # refined further in _detect_file_content_type()
 }
 
 
@@ -56,7 +56,19 @@ def _detect_file_content_type(file_path: str, content: str) -> str:
     if any(k in content.lower() for k in ['[security_alert]', '[failed password]', 'brute force', 'unauthorized access']):
         return 'security_log'
 
+    # Refine YAML: distinguish Kubernetes from GitHub Actions / Docker Compose
     _, ext = os.path.splitext(fname_lower)
+    if ext in ['.yaml', '.yml']:
+        c_lower = content.lower()
+        if any(k in c_lower for k in ['apiversion:', 'kind: deployment', 'kind: service', 'kind: pod', 'kind: ingress']):
+            return 'kubernetes'
+        elif any(k in c_lower for k in ['on:\n', 'jobs:\n', 'runs-on:', 'uses:', 'workflow_dispatch']):
+            return 'shell_script'  # GitHub Actions → treat as script/config
+        elif 'services:' in c_lower and 'image:' in c_lower:
+            return 'dockerfile'   # Docker Compose
+        else:
+            return 'json_config'  # Generic YAML config
+
     return EXTENSION_MAP.get(ext, 'code_generic')
 
 

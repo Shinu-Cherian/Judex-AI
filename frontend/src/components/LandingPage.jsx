@@ -1,9 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
-import {
-  ArrowRight, Cpu, ShieldCheck, Zap, Network, Layers,
-  CheckCircle2, Loader2
-} from 'lucide-react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import MagneticButton from './MagneticButton';
+import FeaturesShowcase from './FeaturesShowcase';
+import PipelineDetail from './PipelineDetail';
+import ComparisonSplit from './ComparisonSplit';
+import useSectionSnap from '../hooks/useSectionSnap';
+
+gsap.registerPlugin(ScrollTrigger);
 
 /* ─── Reusable scroll-reveal wrapper ─── */
 function Reveal({ children, delay = 0, y = 28 }) {
@@ -53,7 +59,7 @@ function InfiniteExecutionCard() {
     { role: 'Security Inspector', model: 'Groq Llama 3.3 70B' },
     { role: 'Performance Inspector', model: 'Mistral Small' },
     { role: 'Code Quality Inspector', model: 'Gemini 2.0 Flash' },
-    { role: 'Chief Judge Verdict Synthesizer', model: 'GPT-4o-mini' },
+    { role: 'Chief Judge Verdict Synthesizer', model: 'DeepSeek-R1 Distill 70B' },
   ];
 
   useEffect(() => {
@@ -184,301 +190,203 @@ const stats = [
   { number: 100, suffix: '%',  label: 'Automated Audit' },
 ];
 
-const steps = [
-  {
-    num: '01',
-    title: 'Upload or Paste',
-    desc: 'Drop a file or paste code, specs, API docs, or logs into the input area.',
-    icon: Layers,
-  },
-  {
-    num: '02',
-    title: 'Auto-Detection',
-    desc: 'Judex AI detects content type and extracts individual functions, sections, or entries.',
-    icon: Cpu,
-  },
-  {
-    num: '03',
-    title: '3 Inspector Nodes',
-    desc: 'Groq Llama 3.3, Mistral Small, and Gemini 2.0 Flash run independently.',
-    icon: Network,
-  },
-  {
-    num: '04',
-    title: 'Chief Judge Verdict',
-    desc: 'GPT-4o-mini Synthesizes all findings into a weighted verdict with LangGraph reflection.',
-    icon: ShieldCheck,
-  },
-];
-
-const comparisonRows = [
-  ['One model, one blind perspective', 'Cross-examined by 3 independent inspector nodes'],
-  ['Hallucination-prone, no cross-check', 'Automated 5-point LangGraph reflection loop'],
-  ['No awareness of what it missed', 'Explicit gap detection — missing items listed'],
-  ['Opaque black-box verdict', 'Full per-model audit trail with confidence scores'],
-  ['No dependency awareness', 'Ripple dependency graph maps all affected modules'],
-];
-
 export default function LandingPage({ onLaunchAnalyzer }) {
+  const heroRef = useRef(null);
+  useSectionSnap('.snap-section');
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Hero drifts up and fades slightly as the user scrolls past it -- cinematic depth.
+      gsap.to(heroRef.current, {
+        yPercent: -12,
+        opacity: 0.5,
+        ease: 'none',
+        scrollTrigger: { trigger: heroRef.current, start: 'top top', end: 'bottom top', scrub: true },
+      });
+    });
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '100px', paddingTop: '0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', paddingTop: '0' }}>
 
-      {/* ─────────── HERO — Full-width split layout ─────────── */}
-      <section style={{ position: 'relative', padding: '80px 0 60px', overflow: 'hidden' }}>
-        {/* Animated background */}
-        <div className="hero-bg">
-          <div className="hero-grid" />
-        </div>
+      {/* ═══════════════ SECTION: HOME ═══════════════ */}
+      <section id="home" className="snap-section" style={{ paddingTop: '20px' }}>
 
-        {/* Two-column split: left text, right visual */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '60px',
-          alignItems: 'center',
-        }}>
+        {/* ── HERO — Full-width split layout ── */}
+        <div ref={heroRef} style={{ position: 'relative', padding: '60px 0 60px', overflow: 'hidden' }}>
+          <div className="hero-bg">
+            <div className="hero-grid" />
+          </div>
 
-          {/* ── LEFT COLUMN ── */}
-          <motion.div
-            initial={{ opacity: 0, x: -32 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {/* Option 3 (Refined): Warm Monochromatic Command Chip */}
+          <div style={{
+            position: 'relative', zIndex: 1,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '60px',
+            alignItems: 'center',
+          }}>
+            {/* ── LEFT COLUMN ── */}
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.4 }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                background: 'rgba(255, 243, 230, 0.03)',
-                border: '1px solid rgba(255, 243, 230, 0.12)',
-                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
-                borderRadius: '4px',
-                padding: '6px 14px',
-                marginBottom: '28px',
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '11px',
-                fontWeight: 600,
-                letterSpacing: '0.08em',
-              }}
+              initial={{ opacity: 0, x: -32 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             >
-              <span style={{ color: 'var(--text-faint)', fontWeight: 600 }}>[</span>
-              <span style={{ color: 'var(--text-heading)', fontWeight: 600 }}>4-LLM MULTI-MODEL CONSENSUS ENGINE</span>
-              <span style={{ color: 'var(--text-faint)', fontWeight: 600 }}>]</span>
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.4 }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  background: 'rgba(255, 243, 230, 0.03)',
+                  border: '1px solid rgba(255, 243, 230, 0.12)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                  borderRadius: '4px',
+                  padding: '6px 14px',
+                  marginBottom: '28px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '0.08em',
+                }}
+              >
+                <span style={{ color: 'var(--text-faint)', fontWeight: 600 }}>[</span>
+                <span style={{ color: 'var(--text-heading)', fontWeight: 600 }}>4-LLM MULTI-MODEL CONSENSUS ENGINE</span>
+                <span style={{ color: 'var(--text-faint)', fontWeight: 600 }}>]</span>
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                style={{
+                  fontFamily: 'Outfit, sans-serif',
+                  fontSize: 'clamp(38px, 4.5vw, 62px)',
+                  fontWeight: 800,
+                  color: 'var(--text-heading)',
+                  lineHeight: 1.08,
+                  letterSpacing: '-0.03em',
+                  marginBottom: '20px',
+                }}
+              >
+                Every angle.<br />One verdict.
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.28, duration: 0.6 }}
+                style={{
+                  fontSize: '16px', color: 'var(--text-body)', lineHeight: 1.75,
+                  marginBottom: '36px', maxWidth: '460px',
+                }}
+              >
+                Autonomous evaluation panel that detects hidden security vulnerabilities, performance bottlenecks, and compliance risks across code, APIs, infrastructure logs, and system specifications.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.38, duration: 0.5 }}
+              >
+                <MagneticButton onClick={onLaunchAnalyzer} className="btn-primary" style={{ height: '50px', padding: '0 32px', fontSize: '15px' }}>
+                  Launch Analyzer <ArrowRight size={16} />
+                </MagneticButton>
+              </motion.div>
             </motion.div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                fontFamily: 'Outfit, sans-serif',
-                fontSize: 'clamp(38px, 4.5vw, 62px)',
-                fontWeight: 800,
-                color: 'var(--text-heading)',
-                lineHeight: 1.08,
-                letterSpacing: '-0.03em',
-                marginBottom: '20px',
-              }}
-            >
-              Every angle.<br />One verdict.
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.28, duration: 0.6 }}
-              style={{
-                fontSize: '16px', color: 'var(--text-body)', lineHeight: 1.75,
-                marginBottom: '36px', maxWidth: '460px',
-              }}
-            >
-              Autonomous evaluation panel that detects hidden security vulnerabilities, performance bottlenecks, and compliance risks across code, APIs, infrastructure logs, and system specifications.
-            </motion.p>
-
+            {/* ── RIGHT COLUMN — Visual Live LLM panel card ── */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.38, duration: 0.5 }}
+              initial={{ opacity: 0, x: 32 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
             >
-              <button onClick={onLaunchAnalyzer} className="btn-primary" style={{ height: '50px', padding: '0 32px', fontSize: '15px' }}>
-                Launch Analyzer <ArrowRight size={16} />
-              </button>
+              <InfiniteExecutionCard />
             </motion.div>
-          </motion.div>
-
-          {/* ── RIGHT COLUMN — Visual Live LLM panel card ── */}
-          <motion.div
-            initial={{ opacity: 0, x: 32 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-          >
-            <InfiniteExecutionCard />
-          </motion.div>
-
+          </div>
         </div>
-      </section>
 
-      {/* ─────────── STATS ROW ─────────── */}
-      <Reveal delay={0}>
-        <div className="stats-row">
-          {stats.map((s, i) => (
-            <div className="stat-cell" key={i}>
-              <div className="stat-number">
-                <Counter to={s.number} suffix={s.suffix} />
+        {/* ── STATS ROW ── */}
+        <Reveal delay={0}>
+          <div className="stats-row" style={{ marginTop: '60px' }}>
+            {stats.map((s, i) => (
+              <div className="stat-cell" key={i}>
+                <div className="stat-number">
+                  <Counter to={s.number} suffix={s.suffix} />
+                </div>
+                <div className="stat-label">{s.label}</div>
               </div>
-              <div className="stat-label">{s.label}</div>
+            ))}
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ═══════════════ SECTION: FEATURES ═══════════════ */}
+      <section id="features" className="snap-section">
+        <Reveal>
+          <FeaturesShowcase />
+        </Reveal>
+      </section>
+
+      {/* ═══════════════ SECTION: HOW IT WORKS ═══════════════ */}
+      <section id="how-it-works" className="snap-section">
+        <Reveal>
+          <PipelineDetail />
+        </Reveal>
+
+        {/* ── ENTERPRISE RELIABILITY — COMPARISON ── */}
+        <div style={{ marginTop: '80px' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <div className="label" style={{ marginBottom: '12px' }}>ENTERPRISE RELIABILITY</div>
+              <h2 style={{
+                fontFamily: 'Outfit, sans-serif',
+                fontSize: 'clamp(26px, 4vw, 38px)',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.25,
+              }}>
+                Why single-model AI<br />fails at complex engineering
+              </h2>
             </div>
-          ))}
+          </Reveal>
+
+          <ComparisonSplit />
         </div>
-      </Reveal>
 
-      {/* ─────────── HOW IT WORKS — PIPELINE ─────────── */}
-      <section>
+        {/* ── CTA ── */}
         <Reveal>
-          <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-            <div className="label" style={{ marginBottom: '12px' }}>ARCHITECTURE</div>
-            <h2 style={{
-              fontFamily: 'Outfit, sans-serif',
-              fontSize: 'clamp(28px, 4vw, 40px)',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              lineHeight: 1.2,
-            }}>
-              How Judex AI Works
-            </h2>
-          </div>
-        </Reveal>
-
-        <div className="pipeline-row">
-          {steps.map((step, i) => {
-            const Icon = step.icon;
-            return (
-              <React.Fragment key={i}>
-                <Reveal delay={i * 0.08}>
-                  <div className="pipeline-step">
-                    <div className="pipeline-num">{step.num}</div>
-                    <div
-                      style={{
-                        width: '48px', height: '48px', borderRadius: '12px',
-                        background: 'var(--accent-glow)', border: '1px solid var(--border-subtle)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}
-                    >
-                      <Icon size={22} style={{ color: 'var(--text-heading)', opacity: 0.7 }} />
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '15px', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '6px' }}>
-                        {step.title}
-                      </div>
-                      <div style={{ fontSize: '13px', color: 'var(--text-body)', lineHeight: 1.6, maxWidth: '180px' }}>
-                        {step.desc}
-                      </div>
-                    </div>
-                  </div>
-                </Reveal>
-                {i < steps.length - 1 && (
-                  <div className="pipeline-connector" />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ─────────── ENTERPRISE RELIABILITY — COMPARISON ─────────── */}
-      <section>
-        <Reveal>
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <div className="label" style={{ marginBottom: '12px' }}>ENTERPRISE RELIABILITY</div>
-            <h2 style={{
-              fontFamily: 'Outfit, sans-serif',
-              fontSize: 'clamp(26px, 4vw, 38px)',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              lineHeight: 1.25,
-            }}>
-              Why single-model AI<br />fails at complex engineering
-            </h2>
-          </div>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <table className="comparison-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '50%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Zap size={14} />
-                      Single LLM Prompt
-                    </div>
-                  </th>
-                  <th style={{ width: '50%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <CheckCircle2 size={14} />
-                      Judex AI — 4-Model Panel
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonRows.map(([bad, good], i) => (
-                  <tr key={i}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <span style={{ color: 'var(--risk-critical)', opacity: 0.5, marginTop: '1px', flexShrink: 0 }}>—</span>
-                        {bad}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <CheckCircle2 size={14} style={{ color: 'var(--risk-low)', marginTop: '2px', flexShrink: 0 }} />
-                        <span><strong>{good}</strong></span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="cta-glow-wrap" style={{ marginTop: '80px' }}>
+            <div
+              className="card"
+              style={{
+                padding: '64px 40px',
+                textAlign: 'center',
+                background: 'var(--bg-card-raised)',
+                animation: 'glow-pulse 4s ease-in-out infinite',
+                borderColor: 'rgba(255,243,230,0.12)',
+              }}
+            >
+              <div className="label" style={{ marginBottom: '16px' }}>GET STARTED</div>
+              <h2 style={{
+                fontFamily: 'Outfit, sans-serif',
+                fontSize: 'clamp(26px, 4vw, 40px)',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                marginBottom: '16px',
+              }}>
+                Ready to run the panel?
+              </h2>
+              <p style={{ fontSize: '15px', color: 'var(--text-body)', marginBottom: '36px', maxWidth: '480px', margin: '0 auto 36px' }}>
+                Paste your code, specs, API contract, or security logs and watch four AI models tear it apart.
+              </p>
+              <MagneticButton onClick={onLaunchAnalyzer} className="btn-primary" style={{ height: '52px', padding: '0 40px', fontSize: '15px' }}>
+                Open Judex AI Analyzer <ArrowRight size={16} />
+              </MagneticButton>
+            </div>
           </div>
         </Reveal>
       </section>
-
-      {/* ─────────── CTA ─────────── */}
-      <Reveal>
-        <div className="cta-glow-wrap">
-          <div
-            className="card"
-            style={{
-              padding: '64px 40px',
-              textAlign: 'center',
-              background: 'var(--bg-card-raised)',
-              animation: 'glow-pulse 4s ease-in-out infinite',
-              borderColor: 'rgba(255,243,230,0.12)',
-            }}
-          >
-            <div className="label" style={{ marginBottom: '16px' }}>GET STARTED</div>
-            <h2 style={{
-              fontFamily: 'Outfit, sans-serif',
-              fontSize: 'clamp(26px, 4vw, 40px)',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              marginBottom: '16px',
-            }}>
-              Ready to run the panel?
-            </h2>
-            <p style={{ fontSize: '15px', color: 'var(--text-body)', marginBottom: '36px', maxWidth: '480px', margin: '0 auto 36px' }}>
-              Paste your code, specs, API contract, or security logs and watch four AI models tear it apart.
-            </p>
-            <button onClick={onLaunchAnalyzer} className="btn-primary" style={{ height: '52px', padding: '0 40px', fontSize: '15px' }}>
-              Open Judex AI Analyzer <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      </Reveal>
 
       {/* small footer gap */}
       <div style={{ height: '20px' }} />

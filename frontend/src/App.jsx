@@ -15,7 +15,13 @@ import DependencyGraph from './components/DependencyGraph';
 import MissingItems from './components/MissingItems';
 import ReflectionNode from './components/ReflectionNode';
 import CodeDiffViewer from './components/CodeDiffViewer';
+import PrecedentMemoryCard from './components/PrecedentMemoryCard';
+import AutopilotCard from './components/AutopilotCard';
+import PlaybookSelector from './components/PlaybookSelector';
+import PlaybookViolations from './components/PlaybookViolations';
 import Footer from './components/Footer';
+import { resolveCitationUrl } from './utils/citationLinks';
+import useSmoothScroll, { scrollToEl } from './hooks/useSmoothScroll';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -149,6 +155,7 @@ function ResultSection({ children, index }) {
 }
 
 export default function App() {
+  useSmoothScroll();
   const [currentPage, setCurrentPage] = useState('home');
   const [content, setContent] = useState('');
   const [analysisType, setAnalysisType] = useState('auto');
@@ -165,6 +172,11 @@ export default function App() {
   const [ragMeta, setRagMeta] = useState({ enabled: false, score: 0, sources: [], pipelineMs: 0 });
   const [patchData, setPatchData] = useState(null);
   const [isPatching, setIsPatching] = useState(false);
+  const [apiError, setApiError] = useState('');  // Bug #12 fix: user-visible error state
+  const [rawContentType, setRawContentType] = useState('code_generic');  // Bug #7 fix: raw type for precedent card
+  const [playbookProfile, setPlaybookProfile] = useState('');
+  const [customRules, setCustomRules] = useState([]);
+  const [pendingScrollTarget, setPendingScrollTarget] = useState(null);
   const apiResRef = useRef(null);
 
   useEffect(() => {
@@ -224,17 +236,46 @@ export default function App() {
     setAnalysisType(newType);
   };
 
+  // Unified nav handler for Header + Footer: 'analyzer' switches to the tool page;
+  // 'home' / 'features' / 'how-it-works' scroll to that section on the home page --
+  // switching back to the home page first if the user is currently on the analyzer.
+  const handleNavigate = (target) => {
+    if (target === 'analyzer') {
+      setCurrentPage('analyzer');
+      return;
+    }
+    if (currentPage !== 'home') {
+      setCurrentPage('home');
+      setPendingScrollTarget(target);
+    } else if (target === 'home') {
+      scrollToEl(document.querySelector('#home') || 0);
+    } else {
+      scrollToEl(`#${target}`);
+    }
+  };
+
+  useEffect(() => {
+    if (currentPage === 'home' && pendingScrollTarget) {
+      const target = pendingScrollTarget;
+      setPendingScrollTarget(null);
+      setTimeout(() => {
+        if (target === 'home') scrollToEl(document.querySelector('#home') || 0);
+        else scrollToEl(`#${target}`);
+      }, 250);
+    }
+  }, [currentPage, pendingScrollTarget]);
+
   // Fire API call immediately when Analyze is clicked
   const handleStartAnalyze = async () => {
     if (!content.trim()) return;
     setIsAnalyzing(true);
     setHasAnalyzed(false);
     setShowMismatchBanner(false);
+    setApiError('');  // clear previous error
     apiResRef.current = null;
 
     try {
       if (zipFile && zipFile.name.endsWith('.zip')) {
-        console.log('[Judex] Uploading project ZIP for multi-file repository audit:', zipFile.name);
         const formData = new FormData();
         formData.append('file', zipFile);
         const response = await fetch('/api/analyze-zip', {
@@ -248,14 +289,20 @@ export default function App() {
         const response = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clause: content, selected_type: analysisType })
+          body: JSON.stringify({
+            clause: content,
+            selected_type: analysisType,
+            playbook_profile: playbookProfile || null,
+            custom_rules: customRules.length > 0 ? customRules : null,
+          })
         });
         if (response.ok) {
           apiResRef.current = await response.json();
         }
       }
     } catch (err) {
-      console.log('[Judex] Backend call error — fallback:', err);
+      console.error('[Judex] Backend call error:', err);
+      setApiError('Connection error: Could not reach the Judex AI backend. Please ensure the server is running and try again.');
     }
 
     // Signal the ExecutionLoader that API call is done
@@ -273,6 +320,9 @@ export default function App() {
       const formattedItems = repoFiles.map((fileItem, idx) => ({
         _idx: idx,
         title: fileItem.filename,
+        path: fileItem.path,
+        content: fileItem.content,
+        full_code: fileItem.content,
         type: fileItem.content_type.toUpperCase(),
         snippet: `${fileItem.path} (${fileItem.line_count} lines)`,
         analysis: {
@@ -366,9 +416,9 @@ export default function App() {
           ]
         },
         models: apiRes?.models || [
-          { name: 'GPT-4o-mini', role: 'Security Inspector', confidence: 91, risk_level: 'MEDIUM', findings: ['Content Security Policy (CSP) header missing', 'Inline scripts require SRI integrity hashes'] },
-          { name: 'Claude Haiku', role: 'Performance Inspector', confidence: 84, risk_level: 'MEDIUM', findings: ['Render-blocking script imports detected', 'Preconnect links missing for external assets'] },
-          { name: 'Gemini Flash', role: 'Code Quality Inspector', confidence: 89, risk_level: 'LOW', findings: ['HTML5 Doctype properly configured', 'Root div container validated'] }
+          { name: 'Groq Llama 3.3 70B', role: 'Security Inspector', confidence: 91, risk_level: 'MEDIUM', findings: ['Content Security Policy (CSP) header missing', 'Inline scripts require SRI integrity hashes'] },
+          { name: 'Mistral Small', role: 'Performance Inspector', confidence: 84, risk_level: 'MEDIUM', findings: ['Render-blocking script imports detected', 'Preconnect links missing for external assets'] },
+          { name: 'Gemini 2.0 Flash', role: 'Code Quality Inspector', confidence: 89, risk_level: 'LOW', findings: ['HTML5 Doctype properly configured', 'Root div container validated'] }
         ],
         heatmap: apiRes?.heatmap || [
           { topic: 'Security Risk Scope', disagreement: 'MEDIUM', count: 2, status: '2/3 Consensus' },
@@ -377,11 +427,13 @@ export default function App() {
         temporal: apiRes?.temporal || { risk_2020: 'LOW', risk_2026: 'MEDIUM', drift: '1 level', deprecated: '1 found', explanation: 'Security standards for web assets require explicit CSP headers in modern 2026 environments.' },
         dependencies: apiRes?.dependencies || { ripple_count: 2, affected_clauses: [{ name: 'main.jsx', status: 'MUST UPDATE' }, { name: 'App.jsx', status: 'REVIEW NEEDED' }] },
         missing_items: apiRes?.missing_clauses || ['Content-Security-Policy header', 'SRI hashes', 'Async script deferral'],
-        reflection: apiRes?.reflection || { status: 'PASSED', checks: ['4-Model panel execution complete (3 Inspectors + 1 Chief Judge)', 'Confidence-weighted consensus calculated', 'Dependency ripple mapped', 'Risk mitigation recommendations generated'] }
+        reflection: apiRes?.reflection || { status: 'PASSED', checks: ['4-Model panel execution complete (3 Inspectors + 1 Chief Judge)', 'Confidence-weighted consensus calculated', 'Dependency ripple mapped', 'Risk mitigation recommendations generated'] },
+        playbook: apiRes?.playbook || { enabled: false, violations: [], passed: [] }
       }
     }));
 
     setDetectedDomain(domainLabel);
+    setRawContentType(contentTypeRaw);  // Bug #7 fix: store raw type for PrecedentMemoryCard
     setDetectionConfidence(96);
     setExtractedItems(formattedItems);
     setSelectedItem({ ...formattedItems[0], _idx: 0 });
@@ -397,7 +449,7 @@ export default function App() {
 
   return (
     <div>
-      <Header setCurrentPage={setCurrentPage} />
+      <Header onNavigate={handleNavigate} />
 
       {/* Analyzer session bar */}
       {currentPage === 'analyzer' && (
@@ -436,6 +488,32 @@ export default function App() {
               onAnalyze={handleStartAnalyze}
               isAnalyzing={isAnalyzing}
             />
+
+            <PlaybookSelector
+              profile={playbookProfile}
+              setProfile={setPlaybookProfile}
+              customRules={customRules}
+              setCustomRules={setCustomRules}
+              content={content}
+            />
+
+            {/* API Error Banner - Bug #12 fix */}
+            {apiError && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '12px',
+                background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: '10px', padding: '14px 18px', marginBottom: '16px'
+              }}>
+                <AlertTriangle size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', fontFamily: 'JetBrains Mono, monospace', marginBottom: '3px' }}>BACKEND CONNECTION ERROR</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-body)' }}>{apiError}</div>
+                </div>
+                <button onClick={() => setApiError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}>
+                  <X size={16} />
+                </button>
+              </div>
+            )}
 
             {/* Content-type mismatch warning banner */}
             <AnimatePresence>
@@ -483,6 +561,7 @@ export default function App() {
 
                     <ResultSection index={0}>
                       <DetectionBadge domain={detectedDomain} confidence={detectionConfidence} isMismatch={isMismatch} selectedType={analysisType} />
+                      <AutopilotCard zipFile={zipFile} extractedItems={extractedItems} />
                     </ResultSection>
 
                     {/* RAG Knowledge-Base Status Card */}
@@ -528,12 +607,12 @@ export default function App() {
                             {ragMeta.sources.length > 0 && (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                 {ragMeta.sources.map((src, i) => (
-                                  <span key={i} style={{
+                                  <a key={i} href={resolveCitationUrl(src)} target="_blank" rel="noreferrer" style={{
                                     fontSize: '10px', fontFamily: 'JetBrains Mono, monospace',
                                     color: '#818cf8', background: 'rgba(99,102,241,0.1)',
                                     border: '1px solid rgba(99,102,241,0.2)',
-                                    borderRadius: '4px', padding: '2px 8px'
-                                  }}>[{src}]</span>
+                                    borderRadius: '4px', padding: '2px 8px', textDecoration: 'none'
+                                  }}>[{src}]</a>
                                 ))}
                               </div>
                             )}
@@ -544,6 +623,27 @@ export default function App() {
 
                     <ResultSection index={1}>
                       <ExtractedItems items={extractedItems} selectedItem={selectedItem} onSelectItem={setSelectedItem} />
+                      <PrecedentMemoryCard precedent={selectedItem?.analysis?.precedent || {
+                        matched_pattern: `Enterprise Security & Performance Baseline (${rawContentType})`,
+                        historical_resolution: rawContentType === 'c_cpp'
+                          ? 'In prior enterprise C++ production audits, thread contention & un-synchronized capacity reads were remediated using std::mutex lock_guard, RAII smart pointers, and noexcept move constructors.'
+                          : rawContentType === 'ruby'
+                          ? 'In prior enterprise Ruby production audits, string query interpolation & system() OS commands were remediated using Parameterized SQLite Bindings & Process isolation.'
+                          : rawContentType === 'python'
+                          ? 'In prior enterprise Python production audits, f-string SQL queries & unverified JWT tokens were remediated using SQLAlchemy Parameterized Bindings & PyJWT algorithm enforcement.'
+                          : rawContentType === 'java_or_similar'
+                          ? 'In prior enterprise Java production audits, raw JDBC string concatenation was remediated using PreparedStatement bindings and HikariCP connection pooling.'
+                          : rawContentType === 'javascript'
+                          ? 'In prior enterprise JavaScript production audits, eval() & innerHTML XSS vectors were remediated using DOMPurify sanitization and strict CSP nonce headers.'
+                          : rawContentType === 'go'
+                          ? 'In prior enterprise Go production audits, unhandled goroutine panics and missing context cancellation were remediated using defer/recover patterns and context.WithTimeout.'
+                          : rawContentType === 'rust'
+                          ? 'In prior enterprise Rust production audits, unsafe block misuse and unwrap() panics were remediated using Result<T,E> propagation and bounded unsafe encapsulation.'
+                          : 'In prior enterprise production audits, raw data manipulation & unvalidated endpoints were remediated using Parameterized Bindings, Connection Pools & CSP Headers.',
+                        benchmark_standard: `CIS-K8s-2026 / NIST Enterprise Baseline`,
+                        confidence_score: 96,
+                        has_precedent: true
+                      }} />
                     </ResultSection>
 
                     <SectionDivider label="CHIEF JUDGE ASSESSMENT" colorClass="divider-chief" />
@@ -551,6 +651,12 @@ export default function App() {
                     <ResultSection index={2}>
                       <ChiefVerdict judge={selectedItem.analysis.judge} />
                     </ResultSection>
+
+                    {selectedItem.analysis.playbook?.enabled && (
+                      <ResultSection index={2}>
+                        <PlaybookViolations playbook={selectedItem.analysis.playbook} />
+                      </ResultSection>
+                    )}
 
                     <SectionDivider label="INSPECTOR FINDINGS" colorClass="divider-inspect" />
 

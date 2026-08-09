@@ -62,7 +62,7 @@ def detect_content_type(text: str) -> str:
         return "json_config"
 
     # 4. C / C++
-    if any(k in t for k in ["#include <", "#include \"", "std::", "int main(", "void main(", "printf(", "cout <<", "#define ", "struct ", "namespace "]):
+    if any(k in t for k in ["#include", "std::", "namespace ", "int main(", "void main(", "printf(", "cout <<", "#define ", "struct ", "size_t", "uint8_t", "std::mutex", "std::vector", "std::unique_ptr"]):
         return "c_cpp"
 
     # 5. C#
@@ -81,10 +81,9 @@ def detect_content_type(text: str) -> str:
     if any(k in t for k in ["<?php", "$this->", "$_get[", "$_post["]):
         return "php"
 
-    # 9. RUBY
-    if any(k in t for k in ["def ", "attr_accessor", "require '", "puts "]):
-        if "attr_accessor" in t or "require '" in t or "puts " in t:
-            return "ruby"
+    # 9. RUBY — use uniquely Ruby tokens only (avoid false-positives with Python "def")
+    if any(k in t for k in ["attr_accessor", "attr_reader", "attr_writer", "require '", "end\n", "module ", ":symbol", "do |"]):
+        return "ruby"
 
     # 10. SWIFT / KOTLIN
     if any(k in t for k in ["import uikit", "import foundation", "guard let", "@objc"]):
@@ -234,7 +233,7 @@ def call_gemini(prompt: str, content: str, retries: int = 2) -> Optional[Dict[st
         }
         for attempt in range(retries):
             try:
-                resp = requests.post(url, headers=headers, json=body, timeout=3)
+                resp = requests.post(url, headers=headers, json=body, timeout=20)  # ✅ Fixed: was 3s (too short for Gemini)
                 if resp.status_code == 200:
                     text = resp.json()['candidates'][0]['content']['parts'][0]['text']
                     parsed = json.loads(text)
@@ -388,9 +387,99 @@ def build_fallback_for_content(content: str, content_type: str) -> Dict[str, Any
     return {"models": [j1, j2, j3], "judge": judge}
 
 
+# --- Deterministic Hallucination Guard -------------------------------------------
+# LLMs occasionally claim a specific syntax pattern is present ("uses var",
+# "calls eval()") when it isn't literally in the input. Prompt instructions alone
+# don't fully prevent this (even at temperature=0). This is a cheap, deterministic
+# cross-check: if a finding claims one of these specific patterns, verify the
+# pattern is an actual substring of the analyzed content -- if not, drop the finding
+# rather than show a factually wrong claim to the user.
+_SYNTAX_CLAIM_GUARDS = [
+    ("var declaration", ["var "]),
+    ("uses var", ["var "]),
+    ("eval(", ["eval("]),
+    ("innerhtml", ["innerhtml"]),
+    ("document.write", ["document.write"]),
+    ("bare except", ["except:"]),
+    ("hashlib.md5", ["md5"]),
+    ("hashlib.sha1", ["sha1"]),
+    ("dangerouslysetinnerhtml", ["dangerouslysetinnerhtml"]),
+]
+
+
+def verify_findings_against_content(findings: List[str], content: str) -> List[str]:
+    """Drop any finding that claims a specific syntax pattern the content doesn't actually contain."""
+    if not findings:
+        return findings
+    text_lower = content.lower()
+    verified = []
+    for f in findings:
+        if not isinstance(f, str):
+            verified.append(f)
+            continue
+        f_lower = f.lower()
+        is_false_claim = False
+        for claim_phrase, required_subs in _SYNTAX_CLAIM_GUARDS:
+            if claim_phrase in f_lower and not any(sub in text_lower for sub in required_subs):
+                is_false_claim = True
+                break
+        if not is_false_claim:
+            verified.append(f)
+    # Never return an empty list from a non-empty input -- fall back to unverified
+    # rather than silently show zero findings.
+    return verified if verified else findings
+
+
+_RISK_ORDER = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
+
+
+def derive_chief_verdict_from_inspectors(models_list: List[Dict[str, Any]], content_type: str) -> Dict[str, Any]:
+    """
+    Build a Chief Judge verdict directly from the actual inspector reports on screen,
+    instead of a generic canned template -- used when the live Chief Judge LLM call
+    fails, so the fallback verdict can never contradict what the inspectors found
+    (e.g. never claim "XSS detected" when the Security Inspector found none).
+    """
+    risks = [m.get("risk_level", "MEDIUM") for m in models_list]
+    final_risk = max(risks, key=lambda r: _RISK_ORDER.get(r, 2))
+
+    top_findings = [m.get("findings", [""])[0] for m in models_list if m.get("findings")]
+    summary = f"{final_risk.title()} risk {content_type.replace('_', ' ')} content. " + " ".join(top_findings[:2])
+
+    recs: List[str] = []
+    for m in models_list:
+        for item in m.get("findings", [])[:2]:
+            recs.append(item)
+    if not recs:
+        recs = ["Review the findings from each inspector above."]
+
+    return {
+        "final_risk": final_risk,
+        "summary": summary.strip(),
+        "recommendations": recs[:4],
+    }
+
+
 # --- Main Orchestrator ----------------------------------------------------------
 
-def analyze_contract_clause(clause_text: str, selected_type: str = "auto") -> Dict[str, Any]:
+def _run_playbook_check(clause_text: str, playbook_profile: Optional[str], custom_rules: Optional[List[Dict[str, Any]]], content_type: Optional[str] = None) -> Dict[str, Any]:
+    """Run the deterministic Judex Playbook compliance check, if a profile or custom rules were supplied."""
+    if not playbook_profile and not custom_rules:
+        return {"enabled": False, "profile_name": None, "violations": [], "passed": [], "rule_count": 0}
+    try:
+        from backend.playbook import evaluate_playbook
+        return evaluate_playbook(clause_text, playbook_profile, custom_rules, content_type)
+    except Exception as e:
+        print(f"[Judex AI] Playbook evaluation error: {e}")
+        return {"enabled": False, "profile_name": None, "violations": [], "passed": [], "rule_count": 0}
+
+
+def analyze_contract_clause(
+    clause_text: str,
+    selected_type: str = "auto",
+    playbook_profile: Optional[str] = None,
+    custom_rules: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
     """
     Main orchestration function -- runs all 4 LLMs with expert prompts.
     Routes through the LangGraph + RAG pipeline when available.
@@ -411,7 +500,9 @@ def analyze_contract_clause(clause_text: str, selected_type: str = "auto") -> Di
         from backend.langgraph_pipeline import run_judex_pipeline, get_compiled_graph
         if get_compiled_graph() is not None:
             print("[Judex AI] -- Routing through RAG pipeline...")
-            return run_judex_pipeline(clause_text, content_type, selected_type, mismatch_warning)
+            result = run_judex_pipeline(clause_text, content_type, selected_type, mismatch_warning)
+            result["playbook"] = _run_playbook_check(clause_text, playbook_profile, custom_rules, content_type)
+            return result
     except Exception as lg_err:
         print(f"[Judex AI] LangGraph pipeline error ({lg_err}) -- falling back to direct pipeline.")
 
@@ -441,11 +532,13 @@ def analyze_contract_clause(clause_text: str, selected_type: str = "auto") -> Di
     m3["name"] = "Gemini 2.0 Flash";     m3["role"] = "Code Quality Inspector"
 
     models_list = [m1, m2, m3]
+    for m in models_list:
+        m["findings"] = verify_findings_against_content(m.get("findings", []), clause_text)
 
     # Step 4: Chief Judge synthesis -- Groq DeepSeek-R1 (free, reasoning model)
     print("[Judex AI] Running Chief Judge (Groq DeepSeek-R1)...")
     chief_live = call_groq_chief(CHIEF_JUDGE_PROMPT, clause_text, models_list)
-    judge_data = chief_live if (chief_live and "final_risk" in chief_live) else fallback["judge"]
+    judge_data = chief_live if (chief_live and "final_risk" in chief_live) else derive_chief_verdict_from_inspectors(models_list, content_type)
 
     # Recalculate weighted confidence from actual inspector scores
     total_conf = sum(m.get("confidence", 85) for m in models_list)
@@ -498,7 +591,7 @@ def analyze_contract_clause(clause_text: str, selected_type: str = "auto") -> Di
                     continue
             # 2. Code (Python, JS, Java, Go, SQL, Shell, Configs)
             elif c_type in ["python", "javascript", "java_or_similar", "code_generic", "sql", "shell_script", "dockerfile", "kubernetes", "json_config"]:
-                if any(bad in i_lower for bad in ["indemnification", "liability cap", "governing law", "hold harmless"]):
+                if any(bad in i_lower for bad in ["indemnification", "liability cap", "governing law", "hold harmless", "content security policy", "csp meta", "sri hash", "subresource integrity", "doctype", "html5 element"]):
                     continue
             # 3. Security Logs
             elif c_type == "security_log":
@@ -544,5 +637,8 @@ def analyze_contract_clause(clause_text: str, selected_type: str = "auto") -> Di
     # Step 8: LangGraph Reflection Node
     reflection_output = run_reflection_node(partial_result)
     partial_result["reflection"] = reflection_output
+
+    # Step 9: Judex Playbook -- org security policy compliance check
+    partial_result["playbook"] = _run_playbook_check(clause_text, playbook_profile, custom_rules, content_type)
 
     return partial_result

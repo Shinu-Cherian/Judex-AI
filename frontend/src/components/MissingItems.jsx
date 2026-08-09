@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
+import CitationText from './CitationText';
 
 export default function MissingItems({ items }) {
   if (!items || items.length === 0) return null;
@@ -17,7 +18,7 @@ export default function MissingItems({ items }) {
         {items.map((item, idx) => (
           <div key={idx} className="missing-item-row">
             <AlertTriangle size={16} color="#ef4444" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: '14px', color: '#f7f8f8', fontWeight: 500 }}>{item}</span>
+            <span style={{ fontSize: '14px', color: '#f7f8f8', fontWeight: 500 }}><CitationText text={item} /></span>
           </div>
         ))}
       </div>

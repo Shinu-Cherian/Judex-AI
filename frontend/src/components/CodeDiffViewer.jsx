@@ -69,8 +69,8 @@ export default function CodeDiffViewer({ originalCode, patchedCode, diffLines, s
             style={{
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '6px 12px', borderRadius: '6px', fontSize: '12px',
-              fontFamily: 'JetBrains Mono, monospace', background: 'rgba(52,211,153,0.15)',
-              border: '1px solid rgba(52,211,153,0.3)', color: '#34d399', cursor: 'pointer'
+              fontFamily: 'JetBrains Mono, monospace', background: 'rgba(255, 243, 230, 0.06)',
+              border: '1px solid var(--border-mid)', color: 'var(--text-heading)', cursor: 'pointer'
             }}
           >
             <Download size={14} />
@@ -83,8 +83,8 @@ export default function CodeDiffViewer({ originalCode, patchedCode, diffLines, s
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 padding: '6px 14px', borderRadius: '6px', fontSize: '12px',
-                fontFamily: 'JetBrains Mono, monospace', background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                border: 'none', color: '#ffffff', cursor: 'pointer', fontWeight: 600
+                fontFamily: 'JetBrains Mono, monospace', background: 'rgba(107, 207, 159, 0.12)',
+                border: '1px solid rgba(107, 207, 159, 0.35)', color: 'var(--risk-low)', cursor: 'pointer', fontWeight: 600
               }}
             >
               <FileCode size={14} />

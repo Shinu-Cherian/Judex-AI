@@ -1,4 +1,5 @@
 import React from 'react';
+import CitationText from './CitationText';
 
 export default function ChiefVerdict({ judge }) {
   if (!judge) return null;
@@ -59,7 +60,7 @@ export default function ChiefVerdict({ judge }) {
         </div>
 
         <div style={{ fontSize: '14px', color: '#f7f8f8', lineHeight: 1.6, marginTop: '8px' }}>
-          {judge.summary || 'Analysis complete.'}
+          <CitationText text={judge.summary || 'Analysis complete.'} />
         </div>
 
         <div style={{ height: '1px', background: '#1c1c1f', margin: '20px 0' }} />
@@ -75,7 +76,7 @@ export default function ChiefVerdict({ judge }) {
                 {idx + 1}.
               </span>
               <span style={{ fontSize: '14px', color: '#f7f8f8', lineHeight: 1.5 }}>
-                {typeof rec === 'object' ? JSON.stringify(rec) : String(rec)}
+                <CitationText text={rec} />
               </span>
             </div>
           ))}

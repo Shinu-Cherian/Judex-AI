@@ -48,7 +48,9 @@ def build_dependency_graph(clause_text: str, content_type: str = "code_generic")
             {"id": "dep_compositor", "name": "Browser Compositor & Render Pipeline", "status": "OPTIMIZED", "reason": "3D transforms promote element animations to dedicated GPU layers."}
         ]
 
-    elif content_type in ["python", "javascript", "java_or_similar", "code_generic", "sql", "shell_script"]:
+    elif content_type in ["python", "javascript", "java_or_similar", "code_generic",
+                           "c_cpp", "rust", "go", "csharp", "ruby", "php",
+                           "sql", "shell_script", "dockerfile", "kubernetes", "json_config"]:
         # Code-level dependency analysis
         imports = re.findall(r'(?:import|from|require)\s+([a-zA-Z0-9_\.\-]+)', text)
 

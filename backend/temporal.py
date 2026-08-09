@@ -33,7 +33,9 @@ def calculate_temporal_risk(clause_text: str, base_risk: str, content_type: str 
             "needs_renegotiation": False
         }
 
-    elif content_type in ["python", "javascript", "java_or_similar", "code_generic", "sql", "shell_script"]:
+    elif content_type in ["python", "javascript", "java_or_similar", "code_generic",
+                           "c_cpp", "rust", "go", "csharp", "ruby", "php",
+                           "sql", "shell_script", "dockerfile", "kubernetes", "json_config"]:
         has_deprecated_patterns = any(k in t_lower for k in ["eval(", "exec(", "var ", "md5", "sha1", "urllib", "subprocess.call", "xml.etree", "strcpy", "gets("])
 
         risk_2020 = "LOW"

@@ -37,14 +37,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Judex AI -- 4-LLM Multi-Domain Analyzer",
-    description="4-LLM Panel: Groq Llama 3.3 (Security) + Mistral Small (Performance) + Gemini 2.0 Flash (Quality) + Chief Judge | Advanced RAG + LangGraph",
+    description="4-LLM Panel: Groq Llama 3.3 (Security) + Mistral Small (Performance) + Gemini 2.0 Flash (Quality) + Chief Judge | Multi-Agent RAG Pipeline",
     version="4.0.0",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "https://judex-ai.onrender.com",
+        "https://luminance-panel-of-judges.onrender.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,6 +60,8 @@ app.add_middleware(
 class AnalysisRequest(BaseModel):
     clause: str
     selected_type: Optional[str] = "auto"  # auto | code | specs | api | logs
+    playbook_profile: Optional[str] = None  # fintech | healthcare | startup | enterprise
+    custom_rules: Optional[List[dict]] = None
 
 
 @app.get("/api/health")
@@ -65,7 +73,7 @@ def health_check():
             "Groq Llama 3.3 70B -- Security Inspector",
             "Mistral Small -- Performance Inspector",
             "Gemini 2.0 Flash -- Code Quality Inspector",
-            "GPT-4o-mini -- Chief Judge Verdict Synthesizer"
+            "DeepSeek-R1 Distill 70B -- Chief Judge Verdict Synthesizer"
         ]
     }
 
@@ -86,12 +94,20 @@ def analyze(req: AnalysisRequest):
     try:
         result = analyze_contract_clause(
             clause_text=req.clause,
-            selected_type=req.selected_type or "auto"
+            selected_type=req.selected_type or "auto",
+            playbook_profile=req.playbook_profile,
+            custom_rules=req.custom_rules,
         )
         return result
     except Exception as e:
         print(f"Error during analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/playbook-profiles")
+def get_playbook_profiles():
+    from backend.playbook import list_profiles
+    return {"profiles": list_profiles()}
 
 
 @app.post("/api/analyze-zip")
@@ -149,6 +165,43 @@ async def patch_zip_endpoint(
         )
     except Exception as e:
         print(f"Error patching ZIP: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/autopilot-zip")
+async def autopilot_zip_endpoint(
+    file: UploadFile = File(...),
+    audit_tree_json: str = Form(...)
+):
+    """
+    Judex Autopilot Endpoint: Automatically remediates ALL flagged files in a project zip and returns patched archive + audit certificate.
+    """
+    try:
+        from backend.patch_engine import autopilot_remediate_repository_zip
+        zip_bytes = await file.read()
+        file_audit_tree = json.loads(audit_tree_json)
+
+        res = autopilot_remediate_repository_zip(zip_bytes, file_audit_tree)
+        patched_bytes = res["patched_zip_bytes"]
+        certificate = res["certificate"]
+
+        filename_patched = f"remediated_autopilot_{file.filename or 'project.zip'}"
+
+        # Encode certificate JSON header or return multi-part
+        import base64
+        cert_b64 = base64.b64encode(json.dumps(certificate).encode('utf-8')).decode('utf-8')
+
+        return Response(
+            content=patched_bytes,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename_patched}",
+                "X-Judex-Audit-Certificate": cert_b64,
+                "Access-Control-Expose-Headers": "Content-Disposition, X-Judex-Audit-Certificate"
+            }
+        )
+    except Exception as e:
+        print(f"Error executing Autopilot remediation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
