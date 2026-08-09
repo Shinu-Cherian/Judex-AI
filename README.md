@@ -72,17 +72,9 @@ Java, Go, Rust, C/C++, C#, PHP, Ruby, Swift, SQL, Shell, Dockerfiles,
 Kubernetes manifests, HTML/CSS, JSON configs, OpenAPI/Swagger specs,
 security logs, and technical specs.
 
-## Screenshots
+## Screenshot
 
-<!-- Drop screenshots into a `screenshots/` folder at the repo root with these filenames, or update the paths below to match. -->
-
-| Landing page | Live 4-model analysis |
-|---|---|
-| ![Landing page](screenshots/landing.png) | ![Live analysis](screenshots/analysis.png) |
-
-| Judex Playbook | Autonomous patch |
-|---|---|
-| ![Judex Playbook](screenshots/playbook.png) | ![Autopilot patch](screenshots/patch.png) |
+![Judex AI — 4-LLM Multi-Model Consensus Engine landing page](screenshots/landing.png)
 
 ## Tech stack
 
