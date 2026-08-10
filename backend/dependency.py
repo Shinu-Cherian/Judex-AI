@@ -4,7 +4,40 @@ Maps dependencies across Code, HTML/DOM, CSS, APIs, Security Logs, and Legal Spe
 """
 
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+
+
+def _extract_function_body(lines_raw: List[str], target_name: str) -> str:
+    """
+    Return just the target function/class's own body text (from its def/class
+    line to the next top-level def/class at the same or shallower indentation),
+    instead of the whole pasted file. Without this, a multi-function paste
+    would misattribute one function's imports/behavior to a totally different
+    function just because both happened to be in the same paste.
+    """
+    start_idx: Optional[int] = None
+    base_indent = 0
+    for i, line in enumerate(lines_raw):
+        stripped = line.strip()
+        if stripped.startswith(('def ', 'class ')) and target_name and target_name in stripped:
+            start_idx = i
+            base_indent = len(line) - len(line.lstrip())
+            break
+    if start_idx is None:
+        return "\n".join(lines_raw)  # couldn't locate it -- fall back to the whole text
+
+    body_lines = [lines_raw[start_idx]]
+    for line in lines_raw[start_idx + 1:]:
+        stripped = line.strip()
+        if not stripped:
+            body_lines.append(line)
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= base_indent and stripped.startswith(('def ', 'class ')):
+            break  # reached the next top-level function/class -- stop here
+        body_lines.append(line)
+    return "\n".join(body_lines)
+
 
 def build_dependency_graph(clause_text: str, content_type: str = "code_generic") -> Dict[str, Any]:
     """
@@ -12,13 +45,14 @@ def build_dependency_graph(clause_text: str, content_type: str = "code_generic")
     """
     text = clause_text or ""
     t_lower = text.lower()
-    
+
     nodes = []
     links = []
     affected_items = []
 
     # Detect primary target name
-    lines = [l.strip() for l in text.split('\n') if l.strip()]
+    lines_raw = text.split('\n')
+    lines = [l.strip() for l in lines_raw if l.strip()]
     first_name = "target_input"
     for line in lines:
         if line.startswith(('def ', 'function ', 'class ')):
@@ -51,30 +85,42 @@ def build_dependency_graph(clause_text: str, content_type: str = "code_generic")
     elif content_type in ["python", "javascript", "java_or_similar", "code_generic",
                            "c_cpp", "rust", "go", "csharp", "ruby", "php",
                            "sql", "shell_script", "dockerfile", "kubernetes", "json_config"]:
-        # Code-level dependency analysis
-        imports = re.findall(r'(?:import|from|require)\s+([a-zA-Z0-9_\.\-]+)', text)
+        # Scope dependency detection to the target function's OWN body, not the
+        # whole pasted file -- otherwise a multi-function paste misattributes
+        # one function's imports/behavior to a different function in the same file.
+        scope_text = _extract_function_body(lines_raw, first_name) if first_name != "target_input" else text
+        scope_lower = scope_text.lower()
+
+        # Imports are usually declared at file-level (outside any function), so
+        # collect all of them, but only keep ones actually referenced by name
+        # inside the target function's own body.
+        all_imports = list(dict.fromkeys(re.findall(r'(?:import|from|require)\s+([a-zA-Z0-9_\.\-]+)', text)))
+        used_imports = [
+            imp for imp in all_imports
+            if re.search(r'\b' + re.escape(imp.split('.')[0]) + r'\b', scope_text)
+        ]
 
         dep_list = []
-        if imports:
-            for imp in set(imports[:3]):
+        if used_imports:
+            for imp in used_imports[:3]:
                 dep_list.append({
                     "id": f"dep_{imp}",
                     "name": f"Module: {imp}",
                     "status": "DEPENDENCY OK",
                     "reason": f"External dependency imported by {first_name}."
                 })
-        
+
         # Only flag DB dependency when REAL database libraries or SQL patterns are present
         # (not just the word "query" which appears in FastAPI/HTTP route code)
-        _db_imports = any(lib in t_lower for lib in [
+        _db_imports = any(lib in scope_lower for lib in [
             "sqlalchemy", "psycopg2", "pymysql", "sqlite3", "pymongo",
             "motor", "tortoise", "asyncpg", "aiomysql", "databases",
             "db.execute", "db.query", "session.query", "cursor.execute",
             "connection.execute", "engine.execute"
         ])
-        _sql_pattern = ("select " in t_lower or "insert into" in t_lower or
-                        "update " in t_lower or "delete from" in t_lower or
-                        "create table" in t_lower)
+        _sql_pattern = ("select " in scope_lower or "insert into" in scope_lower or
+                        "update " in scope_lower or "delete from" in scope_lower or
+                        "create table" in scope_lower)
         if _db_imports or _sql_pattern:
             dep_list.append({
                 "id": "dep_db_driver",
@@ -82,15 +128,15 @@ def build_dependency_graph(clause_text: str, content_type: str = "code_generic")
                 "status": "MUST UPDATE",
                 "reason": "Database queries depend on active connection pool and parameterized execution safety."
             })
-        if ("http" in t_lower or "fetch(" in t_lower or "requests." in t_lower
-                or re.search(r'\bapi\b', t_lower)):
+        if ("http" in scope_lower or "fetch(" in scope_lower or "requests." in scope_lower
+                or re.search(r'\bapi\b', scope_lower)):
             dep_list.append({
                 "id": "dep_http_client",
                 "name": "HTTP Client & TLS Handler",
                 "status": "REVIEW NEEDED",
                 "reason": "Network requests rely on timeout configuration and SSL certificate validation."
             })
-        if "auth" in t_lower or "token" in t_lower or "password" in t_lower or "secret" in t_lower:
+        if "auth" in scope_lower or "token" in scope_lower or "password" in scope_lower or "secret" in scope_lower:
             dep_list.append({
                 "id": "dep_auth_service",
                 "name": "Authentication & Secrets Provider",

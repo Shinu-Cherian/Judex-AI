@@ -132,6 +132,51 @@ function parseItemsFromText(text) {
   }];
 }
 
+// Builds the "Institutional Precedent Memory" card content FROM the real,
+// live analysis results for this specific input -- never a fixed per-language
+// template, since a canned message can end up describing something (like a
+// specific vulnerability class) that isn't actually present in the pasted
+// content at all.
+function buildPrecedentFromAnalysis(analysis, rawContentType, ragMeta) {
+  const topFinding = analysis?.models?.[0]?.findings?.[0];
+  const clip = (s, n) => (typeof s === 'string' && s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+  // Skip the recommendation if it's essentially restating the same finding --
+  // avoids "flagged: X. Recommended: X" style redundancy.
+  const wordSet = (s) => new Set(String(s).toLowerCase().match(/[a-z0-9]+/g) || []);
+  const isNearDuplicate = (a, b) => {
+    const wa = wordSet(a), wb = wordSet(b);
+    if (!wa.size || !wb.size) return false;
+    const overlap = [...wa].filter((w) => wb.has(w)).length;
+    return overlap / Math.min(wa.size, wb.size) > 0.6;
+  };
+  const rawRec = analysis?.judge?.recommendations?.find((r) => !isNearDuplicate(r, topFinding || ''));
+  const topRec = rawRec || (analysis?.judge?.recommendations?.length > 1 ? analysis.judge.recommendations[1] : null);
+
+  const typeLabel = (rawContentType || 'code').replace(/_/g, ' ');
+  const standard = (ragMeta?.sources && ragMeta.sources.length > 0)
+    ? [...new Set(ragMeta.sources)].slice(0, 2).join(' / ')
+    : 'Enterprise Baseline';
+
+  if (!topFinding) {
+    return {
+      matched_pattern: `Enterprise Security & Performance Baseline (${typeLabel})`,
+      historical_resolution: `No directly comparable historical precedent found for this specific ${typeLabel} pattern.`,
+      benchmark_standard: standard,
+      confidence_score: analysis?.judge?.weighted_confidence ?? 0,
+      has_precedent: false,
+    };
+  }
+
+  return {
+    matched_pattern: `Enterprise Security & Performance Baseline (${typeLabel})`,
+    historical_resolution: `This audit flagged: "${clip(topFinding, 160)}"${topRec ? ` Recommended remediation: ${clip(topRec, 140)}` : ''}`,
+    benchmark_standard: standard,
+    confidence_score: analysis?.judge?.weighted_confidence ?? 85,
+    has_precedent: true,
+  };
+}
+
 // Section divider component
 function SectionDivider({ label, colorClass = '' }) {
   return (
@@ -623,27 +668,7 @@ export default function App() {
 
                     <ResultSection index={1}>
                       <ExtractedItems items={extractedItems} selectedItem={selectedItem} onSelectItem={setSelectedItem} />
-                      <PrecedentMemoryCard precedent={selectedItem?.analysis?.precedent || {
-                        matched_pattern: `Enterprise Security & Performance Baseline (${rawContentType})`,
-                        historical_resolution: rawContentType === 'c_cpp'
-                          ? 'In prior enterprise C++ production audits, thread contention & un-synchronized capacity reads were remediated using std::mutex lock_guard, RAII smart pointers, and noexcept move constructors.'
-                          : rawContentType === 'ruby'
-                          ? 'In prior enterprise Ruby production audits, string query interpolation & system() OS commands were remediated using Parameterized SQLite Bindings & Process isolation.'
-                          : rawContentType === 'python'
-                          ? 'In prior enterprise Python production audits, f-string SQL queries & unverified JWT tokens were remediated using SQLAlchemy Parameterized Bindings & PyJWT algorithm enforcement.'
-                          : rawContentType === 'java_or_similar'
-                          ? 'In prior enterprise Java production audits, raw JDBC string concatenation was remediated using PreparedStatement bindings and HikariCP connection pooling.'
-                          : rawContentType === 'javascript'
-                          ? 'In prior enterprise JavaScript production audits, eval() & innerHTML XSS vectors were remediated using DOMPurify sanitization and strict CSP nonce headers.'
-                          : rawContentType === 'go'
-                          ? 'In prior enterprise Go production audits, unhandled goroutine panics and missing context cancellation were remediated using defer/recover patterns and context.WithTimeout.'
-                          : rawContentType === 'rust'
-                          ? 'In prior enterprise Rust production audits, unsafe block misuse and unwrap() panics were remediated using Result<T,E> propagation and bounded unsafe encapsulation.'
-                          : 'In prior enterprise production audits, raw data manipulation & unvalidated endpoints were remediated using Parameterized Bindings, Connection Pools & CSP Headers.',
-                        benchmark_standard: `CIS-K8s-2026 / NIST Enterprise Baseline`,
-                        confidence_score: 96,
-                        has_precedent: true
-                      }} />
+                      <PrecedentMemoryCard precedent={selectedItem?.analysis?.precedent || buildPrecedentFromAnalysis(selectedItem?.analysis, rawContentType, ragMeta)} />
                     </ResultSection>
 
                     <SectionDivider label="CHIEF JUDGE ASSESSMENT" colorClass="divider-chief" />
