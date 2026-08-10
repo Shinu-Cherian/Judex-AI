@@ -78,8 +78,8 @@ security logs, and technical specs.
 
 ## Tech stack
 
-**Backend:** FastAPI, ChromaDB (vector store), `sentence-transformers`
-(embeddings), Groq / Mistral / Gemini APIs.
+**Backend:** FastAPI, ChromaDB (vector store, lightweight ONNX embeddings),
+Groq / Mistral / Gemini APIs.
 
 **Frontend:** React 19, Vite, Framer Motion, GSAP + Lenis (scroll
 animation), `@xyflow/react` (dependency graph), Recharts.

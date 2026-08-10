@@ -2,7 +2,7 @@
 Advanced RAG Engine for Judex AI.
 Implements:
   1. ChromaDB Vector Store -- 4-domain persistent collections
-  2. Sentence Transformer Embeddings (all-MiniLM-L6-v2)
+  2. Lightweight ONNX Embeddings (ChromaDB's bundled MiniLM, no PyTorch dependency)
   3. HyDE (Hypothetical Document Embeddings) -- boosts retrieval recall
   4. Hybrid Retrieval with relevance scoring
 
@@ -76,10 +76,8 @@ def initialize_rag() -> bool:
         print("[RAG] Initializing ChromaDB persistent client...")
         _chroma_client = chromadb.PersistentClient(path=_CHROMA_PERSIST_DIR)
 
-        print("[RAG] Loading sentence-transformers embedding model (all-MiniLM-L6-v2)...")
-        _embed_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
+        print("[RAG] Loading lightweight ONNX embedding model (avoids the full PyTorch/sentence-transformers footprint)...")
+        _embed_fn = embedding_functions.DefaultEmbeddingFunction()
 
         # Create / get all 4 collections
         for name in COLLECTION_NAMES:
@@ -96,7 +94,7 @@ def initialize_rag() -> bool:
         return True
 
     except ImportError as e:
-        print(f"[RAG] WARNING: ChromaDB/sentence-transformers not installed: {e}. RAG disabled.")
+        print(f"[RAG] WARNING: ChromaDB/onnxruntime not installed: {e}. RAG disabled.")
         return False
     except Exception as e:
         print(f"[RAG] WARNING: Initialization failed: {e}. Continuing without RAG.")
