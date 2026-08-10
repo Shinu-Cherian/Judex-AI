@@ -219,7 +219,7 @@ export default function LandingPage({ onLaunchAnalyzer }) {
             <div className="hero-grid" />
           </div>
 
-          <div style={{
+          <div className="hero-two-col" style={{
             position: 'relative', zIndex: 1,
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',

@@ -978,7 +978,7 @@ h1, h2, h3, h4 {
   .split-grid-50 { grid-template-columns: 1fr; }
   .chief-verdict-card { flex-direction: column; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
-  .comparison-table thead, .comparison-table tbody, .comparison-table th, .comparison-table td, .comparison-table tr { display: block; }
+  .hero-two-col { grid-template-columns: 1fr !important; gap: 32px !important; }
 }
 
 /* ─────────────────────────────────────────────────
