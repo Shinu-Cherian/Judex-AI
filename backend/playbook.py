@@ -58,7 +58,7 @@ PLAYBOOK_PROFILES: Dict[str, Dict[str, Any]] = {
         "rules": [
             # -- code --
             _rule("no-weak-hash", "Passwords must use bcrypt or argon2, never MD5/SHA1", "forbidden",
-                  ["md5(", "hashlib.md5", "sha1(", "hashlib.sha1"],
+                  ["md5(", "hashlib.md5", "digest::md5", "md5.hexdigest", "md5.digest", "sha1(", "hashlib.sha1", "digest::sha1", "sha1.hexdigest"],
                   "import bcrypt; bcrypt.hashpw(password.encode(), bcrypt.gensalt())", "OWASP-A02-2025"),
             _rule("no-raw-sql", "All SQL must use parameterized queries, not string concatenation", "forbidden",
                   ["' + ", "\" + ", "% (", "f\"select", "f'select", "f\"insert", "f'insert"],
@@ -112,7 +112,7 @@ PLAYBOOK_PROFILES: Dict[str, Dict[str, Any]] = {
                   ["print(patient", "log.info(patient", "print(ssn", "print(dob", "logging.info(patient"],
                   "Log an anonymized/hashed reference instead of the raw patient identifier.", "NIST-800-92-2026"),
             _rule("no-weak-hash", "Passwords must use bcrypt or argon2, never MD5/SHA1", "forbidden",
-                  ["md5(", "hashlib.md5", "sha1(", "hashlib.sha1"],
+                  ["md5(", "hashlib.md5", "digest::md5", "md5.hexdigest", "md5.digest", "sha1(", "hashlib.sha1", "digest::sha1", "sha1.hexdigest"],
                   "import bcrypt; bcrypt.hashpw(password.encode(), bcrypt.gensalt())", "OWASP-A02-2025"),
             _rule("no-raw-sql", "All SQL must use parameterized queries, not string concatenation", "forbidden",
                   ["' + ", "\" + ", "% (", "f\"select", "f'select"],
@@ -203,7 +203,7 @@ PLAYBOOK_PROFILES: Dict[str, Dict[str, Any]] = {
                   "Mask card numbers (show last 4 digits only) before logging or persisting.",
                   "CIS-SIEM-2026", applies_if=["card_number", "card number", "cardnumber"]),
             _rule("no-weak-hash", "Passwords must use bcrypt or argon2, never MD5/SHA1", "forbidden",
-                  ["md5(", "hashlib.md5", "sha1(", "hashlib.sha1"],
+                  ["md5(", "hashlib.md5", "digest::md5", "md5.hexdigest", "md5.digest", "sha1(", "hashlib.sha1", "digest::sha1", "sha1.hexdigest"],
                   "import bcrypt; bcrypt.hashpw(password.encode(), bcrypt.gensalt())", "OWASP-A02-2025"),
             _rule("no-raw-sql", "All SQL must use parameterized queries, not string concatenation", "forbidden",
                   ["' + ", "\" + ", "% (", "f\"select", "f'select"],

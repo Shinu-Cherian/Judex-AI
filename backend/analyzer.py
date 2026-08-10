@@ -9,6 +9,7 @@ Orchestrator Engine for 4-LLM Panel of Judges.
 
 import os
 import json
+import re
 import time
 import requests
 from typing import Dict, Any, List, Optional
@@ -443,13 +444,31 @@ def derive_chief_verdict_from_inspectors(models_list: List[Dict[str, Any]], cont
     risks = [m.get("risk_level", "MEDIUM") for m in models_list]
     final_risk = max(risks, key=lambda r: _RISK_ORDER.get(r, 2))
 
-    top_findings = [m.get("findings", [""])[0] for m in models_list if m.get("findings")]
+    def _is_near_duplicate(a: str, b: str) -> bool:
+        norm = lambda s: set(re.findall(r"[a-z0-9]+", s.lower()))
+        wa, wb = norm(a), norm(b)
+        if not wa or not wb:
+            return False
+        overlap = len(wa & wb) / min(len(wa), len(wb))
+        return overlap > 0.5  # >50% word overlap -- treat as saying the same thing twice
+
+    def _dedup(items: List[str]) -> List[str]:
+        kept: List[str] = []
+        for item in items:
+            if not isinstance(item, str) or not item.strip():
+                continue
+            if any(_is_near_duplicate(item, k) for k in kept):
+                continue
+            kept.append(item)
+        return kept
+
+    top_findings = _dedup([m.get("findings", [""])[0] for m in models_list if m.get("findings")])
     summary = f"{final_risk.title()} risk {content_type.replace('_', ' ')} content. " + " ".join(top_findings[:2])
 
     recs: List[str] = []
     for m in models_list:
-        for item in m.get("findings", [])[:2]:
-            recs.append(item)
+        recs.extend(m.get("findings", [])[:2])
+    recs = _dedup(recs)
     if not recs:
         recs = ["Review the findings from each inspector above."]
 

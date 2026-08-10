@@ -9,13 +9,17 @@ export default function PlaybookSelector({ profile, setProfile, customRules, set
   const [draftPatterns, setDraftPatterns] = useState('');
   const [draftFix, setDraftFix] = useState('');
   const [isAutoSuggested, setIsAutoSuggested] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const manuallyChosen = useRef(false);
 
   useEffect(() => {
     fetch('/api/playbook-profiles')
-      .then((r) => r.json())
-      .then((data) => setProfiles(data.profiles || []))
-      .catch(() => setProfiles([]));
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => { setProfiles(data.profiles || []); setLoadError(false); })
+      .catch(() => { setProfiles([]); setLoadError(true); });
   }, []);
 
   // Auto-detect the most relevant org profile from pasted content -- only while
@@ -106,6 +110,12 @@ export default function PlaybookSelector({ profile, setProfile, customRules, set
             </span>
           )}
           {activeProfile.description}
+        </div>
+      )}
+
+      {loadError && (
+        <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '10px', fontFamily: 'JetBrains Mono, monospace' }}>
+          Couldn't reach the backend to load playbook profiles. Make sure the API server is running, then refresh.
         </div>
       )}
 

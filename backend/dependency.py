@@ -82,7 +82,8 @@ def build_dependency_graph(clause_text: str, content_type: str = "code_generic")
                 "status": "MUST UPDATE",
                 "reason": "Database queries depend on active connection pool and parameterized execution safety."
             })
-        if "http" in t_lower or "fetch" in t_lower or "requests" in t_lower or "api" in t_lower:
+        if ("http" in t_lower or "fetch(" in t_lower or "requests." in t_lower
+                or re.search(r'\bapi\b', t_lower)):
             dep_list.append({
                 "id": "dep_http_client",
                 "name": "HTTP Client & TLS Handler",

@@ -34,6 +34,13 @@ CRITICAL DEPENDENCY RULE (applies to all code):
 - If you believe a new dependency would genuinely help, mention it in "summary_of_changes" as a suggestion instead of importing it -- never silently introduce an import the project doesn't already have, since that breaks the build.
 - Prefer fixes using only what's already available in the language/runtime or already imported in the input.
 
+CRITICAL COMPLETENESS RULE:
+- You will be given a list of specific findings/recommendations to fix. Address EVERY one of them in the patched code -- do not silently skip one (e.g. if both a SQL injection finding AND a command-injection finding are listed, fix both, not just one). If you genuinely cannot fix one (e.g. it needs a new dependency, which is disallowed above), say so explicitly as a "Note:" in summary_of_changes -- never leave it silently unaddressed with no mention at all.
+
+CRITICAL NON-DESTRUCTIVE RULE:
+- "Non-destructive" means every line of the original logic is preserved unless it is the specific thing being fixed. Never delete a variable, statement, or line that isn't directly part of a finding you're fixing.
+- If a flagged line is a hardcoded secret, fix it by READING from the environment in the exact same place the hardcoded value was, e.g. `api_key = ENV['API_KEY']` in Ruby, `api_key = os.environ["API_KEY"]` in Python -- keep the same variable name, same location, same scope. NEVER write the secret value INTO an environment variable from source code (e.g. `ENV['API_KEY'] = 'sk_live_...'` is WRONG -- the secret literal is still sitting in the source, unfixed). The whole point is the literal secret value must not appear anywhere in the patched code at all.
+
 OUTPUT CONSTRAINTS:
 - Return strictly valid JSON with keys "patched_code" and "summary_of_changes".
 - Do NOT output markdown code fences (```) inside the JSON values.

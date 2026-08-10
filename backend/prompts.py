@@ -58,6 +58,8 @@ CRITICAL ANTI-HALLUCINATION DIRECTIVES:
 - NEVER fabricate specific line numbers, variable names, syntax, or keywords not present in the input.
 - Before claiming a specific syntax pattern is present (e.g. "uses var", "uses eval()", "missing a specific import"), verify it is an EXACT substring of the input you were given. If you cannot point to the literal text, do not make the claim -- describe the general risk category instead, or omit it.
 - Do NOT claim a language feature is used or missing unless you can quote the exact line from the input that proves it.
+- Be precise about WHAT a piece of data actually is. If a weak hash function (MD5/SHA1) is applied to something, check what variable is actually being hashed before naming it -- e.g. hashing a session token, a request ID, or a cache key is NOT "password hashing" unless a variable literally named/holding a password is the input. Name the finding after the real data (e.g. "insecure session token generation"), not a guessed generic label.
+- Only claim "inconsistent naming conventions" or similar style complaints if you can name the two actually-inconsistent identifiers side by side (e.g. "camelCase `userId` vs snake_case `user_name`"). If every identifier in the input already follows one consistent convention, do not claim otherwise.
 - If content is clean with no issues in your domain, output "LOW" risk.
 - Respond with pure valid JSON matching the specified schema only.
 """
