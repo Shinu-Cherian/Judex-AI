@@ -979,6 +979,7 @@ h1, h2, h3, h4 {
   .chief-verdict-card { flex-direction: column; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .hero-two-col { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .compare-row { grid-template-columns: 1fr !important; }
 }
 
 /* ─────────────────────────────────────────────────
