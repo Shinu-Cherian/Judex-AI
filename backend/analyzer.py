@@ -248,12 +248,12 @@ def call_gemini(prompt: str, content: str, retries: int = 2) -> Optional[Dict[st
                 if attempt < retries - 1:
                     time.sleep(0.5)
 
-    # Failover to Mixtral 8x7B (MoE Architecture) if Gemini rate-limits
+    # Failover to Llama 3.1 8B Instant if Gemini rate-limits
     if GROQ_API_KEY:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
         body = {
-            "model": "mixtral-8x7b-32768",
+            "model": "llama-3.1-8b-instant",
             "temperature": 0,
             "messages": [
                 {"role": "system", "content": prompt},
@@ -268,7 +268,7 @@ def call_gemini(prompt: str, content: str, retries: int = 2) -> Optional[Dict[st
                 text = resp.json()['choices'][0]['message']['content']
                 parsed = json.loads(text)
                 if "risk_level" in parsed and "findings" in parsed:
-                    parsed["name"] = "Mixtral 8x7B MoE"
+                    parsed["name"] = "Llama 3.1 8B Instant"
                     return parsed
         except Exception as e:
             print(f"[Groq Code Quality Backup] Failed: {e}")
@@ -277,7 +277,7 @@ def call_gemini(prompt: str, content: str, retries: int = 2) -> Optional[Dict[st
 
 
 def call_groq_chief(prompt: str, content: str, inspector_reports: List[Dict], retries: int = 2) -> Optional[Dict[str, Any]]:
-    """Call DeepSeek-R1 / Llama 3.3 -- Chief Judge Verdict Synthesizer. Temperature=0."""
+    """Call GPT-OSS 120B -- Chief Judge Verdict Synthesizer. Temperature=0."""
     if not GROQ_API_KEY:
         return None
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -296,14 +296,18 @@ Original content analyzed:
 Synthesize the final verdict as ONLY valid JSON. No <think> tags, no explanations -- raw JSON only."""
 
     body = {
-        "model": "deepseek-r1-distill-llama-70b",
+        "model": "openai/gpt-oss-120b",
         "temperature": 0,
         "messages": [
             {"role": "system", "content": prompt},
             {"role": "user", "content": user_message}
         ],
         "response_format": {"type": "json_object"},
-        "max_tokens": 1024
+        # gpt-oss-120b is a reasoning model -- its reasoning tokens are drawn from
+        # the same max_tokens budget as the final JSON answer, so this needs more
+        # headroom than a non-reasoning model call to avoid the answer getting
+        # truncated before the model ever emits the closing JSON.
+        "max_tokens": 3000
     }
     for attempt in range(retries):
         try:
@@ -554,8 +558,8 @@ def analyze_contract_clause(
     for m in models_list:
         m["findings"] = verify_findings_against_content(m.get("findings", []), clause_text)
 
-    # Step 4: Chief Judge synthesis -- Groq DeepSeek-R1 (free, reasoning model)
-    print("[Judex AI] Running Chief Judge (Groq DeepSeek-R1)...")
+    # Step 4: Chief Judge synthesis -- Groq GPT-OSS 120B (reasoning model)
+    print("[Judex AI] Running Chief Judge (Groq GPT-OSS 120B)...")
     chief_live = call_groq_chief(CHIEF_JUDGE_PROMPT, clause_text, models_list)
     judge_data = chief_live if (chief_live and "final_risk" in chief_live) else derive_chief_verdict_from_inspectors(models_list, content_type)
 

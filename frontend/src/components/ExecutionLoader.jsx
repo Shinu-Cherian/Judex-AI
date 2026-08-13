@@ -32,7 +32,7 @@ const MODELS = [
   },
   {
     title: 'Chief Judge Verdict Synthesizer',
-    sub: 'DeepSeek-R1 Distill 70B',
+    sub: 'GPT-OSS 120B',
     task: 'Cross-examining 3 inspector reports, calculating weighted consensus...',
     Icon: Gavel,
     color: '#a080c0',

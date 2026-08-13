@@ -59,7 +59,7 @@ function InfiniteExecutionCard() {
     { role: 'Security Inspector', model: 'Groq Llama 3.3 70B' },
     { role: 'Performance Inspector', model: 'Mistral Small' },
     { role: 'Code Quality Inspector', model: 'Gemini 2.0 Flash' },
-    { role: 'Chief Judge Verdict Synthesizer', model: 'DeepSeek-R1 Distill 70B' },
+    { role: 'Chief Judge Verdict Synthesizer', model: 'GPT-OSS 120B' },
   ];
 
   useEffect(() => {
