@@ -73,7 +73,7 @@ def health_check():
             "Groq Llama 3.3 70B -- Security Inspector",
             "Mistral Small -- Performance Inspector",
             "Gemini 2.0 Flash -- Code Quality Inspector",
-            "DeepSeek-R1 Distill 70B -- Chief Judge Verdict Synthesizer"
+            "GPT-OSS 120B -- Chief Judge Verdict Synthesizer"
         ]
     }
 
@@ -108,6 +108,20 @@ def analyze(req: AnalysisRequest):
 def get_playbook_profiles():
     from backend.playbook import list_profiles
     return {"profiles": list_profiles()}
+
+
+@app.get("/api/eval-report")
+def get_eval_report():
+    """
+    Returns the last-generated accuracy report from backend/eval_harness.py
+    (precision/recall/F1/hallucination-rate against a hand-labeled benchmark).
+    Generate/refresh it by running `python -m backend.eval_harness`.
+    """
+    report_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "eval_report.json")
+    if not os.path.exists(report_path):
+        raise HTTPException(status_code=404, detail="No eval report generated yet. Run `python -m backend.eval_harness`.")
+    with open(report_path, "r") as f:
+        return json.load(f)
 
 
 @app.post("/api/analyze-zip")

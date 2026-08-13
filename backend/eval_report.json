@@ -1,0 +1,471 @@
+{
+  "benchmark_size": 20,
+  "cases_fully_correct": 5,
+  "cases_fully_correct_pct": 25.0,
+  "overall": {
+    "true_positives": 10,
+    "false_positives": 19,
+    "false_negatives": 0,
+    "true_negatives": 111,
+    "precision": 0.3448,
+    "recall": 1.0,
+    "f1": 0.5128,
+    "hallucination_rate": 0.6552
+  },
+  "per_tag": {
+    "hardcoded_secret": {
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "tn": 18,
+      "precision": 0.5,
+      "recall": 1.0
+    },
+    "bare_except": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "tn": 19,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "command_injection": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "tn": 19,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "xss": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 18,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "weak_hash": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "tn": 19,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "sql_injection": {
+      "tp": 3,
+      "fp": 10,
+      "fn": 0,
+      "tn": 7,
+      "precision": 0.2308,
+      "recall": 1.0
+    },
+    "missing_auth": {
+      "tp": 1,
+      "fp": 8,
+      "fn": 0,
+      "tn": 11,
+      "precision": 0.1111,
+      "recall": 1.0
+    }
+  },
+  "per_case": [
+    {
+      "id": "py-sqli-vuln-1",
+      "content_type": "python",
+      "expected_tags": [
+        "sql_injection"
+      ],
+      "detected_tags": [
+        "missing_auth",
+        "sql_injection"
+      ],
+      "true_positives": [
+        "sql_injection"
+      ],
+      "false_positives": [
+        "missing_auth"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "missing_auth": "authorization"
+      },
+      "correct": false,
+      "pipeline_ms": 8517
+    },
+    {
+      "id": "py-sqli-clean-1",
+      "content_type": "python",
+      "expected_tags": [],
+      "detected_tags": [
+        "missing_auth",
+        "sql_injection"
+      ],
+      "true_positives": [],
+      "false_positives": [
+        "missing_auth",
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection",
+        "missing_auth": "authorization"
+      },
+      "correct": false,
+      "pipeline_ms": 5464
+    },
+    {
+      "id": "py-secret-vuln-1",
+      "content_type": "python",
+      "expected_tags": [
+        "hardcoded_secret"
+      ],
+      "detected_tags": [
+        "hardcoded_secret",
+        "missing_auth",
+        "sql_injection"
+      ],
+      "true_positives": [
+        "hardcoded_secret"
+      ],
+      "false_positives": [
+        "missing_auth",
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection",
+        "missing_auth": "missing auth"
+      },
+      "correct": false,
+      "pipeline_ms": 6579
+    },
+    {
+      "id": "py-secret-clean-1",
+      "content_type": "python",
+      "expected_tags": [],
+      "detected_tags": [
+        "hardcoded_secret",
+        "sql_injection"
+      ],
+      "true_positives": [],
+      "false_positives": [
+        "hardcoded_secret",
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "hardcoded_secret": "hardcoded",
+        "sql_injection": "sql injection"
+      },
+      "correct": false,
+      "pipeline_ms": 4879
+    },
+    {
+      "id": "py-hash-vuln-1",
+      "content_type": "python",
+      "expected_tags": [
+        "weak_hash"
+      ],
+      "detected_tags": [
+        "sql_injection",
+        "weak_hash"
+      ],
+      "true_positives": [
+        "weak_hash"
+      ],
+      "false_positives": [
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection"
+      },
+      "correct": false,
+      "pipeline_ms": 7507
+    },
+    {
+      "id": "py-hash-clean-1",
+      "content_type": "python",
+      "expected_tags": [],
+      "detected_tags": [
+        "sql_injection"
+      ],
+      "true_positives": [],
+      "false_positives": [
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection"
+      },
+      "correct": false,
+      "pipeline_ms": 5273
+    },
+    {
+      "id": "js-xss-vuln-1",
+      "content_type": "javascript",
+      "expected_tags": [
+        "xss"
+      ],
+      "detected_tags": [
+        "xss"
+      ],
+      "true_positives": [
+        "xss"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "false_positive_evidence": {},
+      "correct": true,
+      "pipeline_ms": 4075
+    },
+    {
+      "id": "js-xss-clean-1",
+      "content_type": "javascript",
+      "expected_tags": [],
+      "detected_tags": [],
+      "true_positives": [],
+      "false_positives": [],
+      "false_negatives": [],
+      "false_positive_evidence": {},
+      "correct": true,
+      "pipeline_ms": 3058
+    },
+    {
+      "id": "js-eval-vuln-1",
+      "content_type": "javascript",
+      "expected_tags": [
+        "xss"
+      ],
+      "detected_tags": [
+        "xss"
+      ],
+      "true_positives": [
+        "xss"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "false_positive_evidence": {},
+      "correct": true,
+      "pipeline_ms": 7962
+    },
+    {
+      "id": "js-eval-clean-1",
+      "content_type": "javascript",
+      "expected_tags": [],
+      "detected_tags": [],
+      "true_positives": [],
+      "false_positives": [],
+      "false_negatives": [],
+      "false_positive_evidence": {},
+      "correct": true,
+      "pipeline_ms": 2715
+    },
+    {
+      "id": "py-cmdi-vuln-1",
+      "content_type": "python",
+      "expected_tags": [
+        "command_injection"
+      ],
+      "detected_tags": [
+        "command_injection",
+        "sql_injection"
+      ],
+      "true_positives": [
+        "command_injection"
+      ],
+      "false_positives": [
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection"
+      },
+      "correct": false,
+      "pipeline_ms": 5502
+    },
+    {
+      "id": "py-cmdi-clean-1",
+      "content_type": "python",
+      "expected_tags": [],
+      "detected_tags": [
+        "sql_injection"
+      ],
+      "true_positives": [],
+      "false_positives": [
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection"
+      },
+      "correct": false,
+      "pipeline_ms": 7563
+    },
+    {
+      "id": "sql-vuln-1",
+      "content_type": "sql",
+      "expected_tags": [
+        "sql_injection"
+      ],
+      "detected_tags": [
+        "missing_auth",
+        "sql_injection"
+      ],
+      "true_positives": [
+        "sql_injection"
+      ],
+      "false_positives": [
+        "missing_auth"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "missing_auth": "authorization"
+      },
+      "correct": false,
+      "pipeline_ms": 3578
+    },
+    {
+      "id": "sql-clean-1",
+      "content_type": "sql",
+      "expected_tags": [],
+      "detected_tags": [
+        "missing_auth",
+        "sql_injection"
+      ],
+      "true_positives": [],
+      "false_positives": [
+        "missing_auth",
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection",
+        "missing_auth": "authorization"
+      },
+      "correct": false,
+      "pipeline_ms": 2919
+    },
+    {
+      "id": "api-vuln-1",
+      "content_type": "api_spec",
+      "expected_tags": [
+        "missing_auth"
+      ],
+      "detected_tags": [
+        "missing_auth"
+      ],
+      "true_positives": [
+        "missing_auth"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "false_positive_evidence": {},
+      "correct": true,
+      "pipeline_ms": 7049
+    },
+    {
+      "id": "api-clean-1",
+      "content_type": "api_spec",
+      "expected_tags": [],
+      "detected_tags": [
+        "missing_auth"
+      ],
+      "true_positives": [],
+      "false_positives": [
+        "missing_auth"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "missing_auth": "missing auth"
+      },
+      "correct": false,
+      "pipeline_ms": 4228
+    },
+    {
+      "id": "log-vuln-1",
+      "content_type": "security_log",
+      "expected_tags": [
+        "sql_injection"
+      ],
+      "detected_tags": [
+        "missing_auth",
+        "sql_injection"
+      ],
+      "true_positives": [
+        "sql_injection"
+      ],
+      "false_positives": [
+        "missing_auth"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "missing_auth": "missing auth"
+      },
+      "correct": false,
+      "pipeline_ms": 8648
+    },
+    {
+      "id": "log-clean-1",
+      "content_type": "security_log",
+      "expected_tags": [],
+      "detected_tags": [
+        "missing_auth"
+      ],
+      "true_positives": [],
+      "false_positives": [
+        "missing_auth"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "missing_auth": "missing auth"
+      },
+      "correct": false,
+      "pipeline_ms": 6472
+    },
+    {
+      "id": "py-except-vuln-1",
+      "content_type": "python",
+      "expected_tags": [
+        "bare_except"
+      ],
+      "detected_tags": [
+        "bare_except",
+        "sql_injection"
+      ],
+      "true_positives": [
+        "bare_except"
+      ],
+      "false_positives": [
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection"
+      },
+      "correct": false,
+      "pipeline_ms": 4586
+    },
+    {
+      "id": "py-except-clean-1",
+      "content_type": "python",
+      "expected_tags": [],
+      "detected_tags": [
+        "sql_injection"
+      ],
+      "true_positives": [],
+      "false_positives": [
+        "sql_injection"
+      ],
+      "false_negatives": [],
+      "false_positive_evidence": {
+        "sql_injection": "sql injection"
+      },
+      "correct": false,
+      "pipeline_ms": 4591
+    }
+  ],
+  "total_runtime_ms": 181187
+}
